@@ -1,2 +1,6 @@
 application/cache/*
 application/logs/*
+application/config/database.php
+repo/*
+upload/*
+.settings

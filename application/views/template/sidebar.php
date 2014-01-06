@@ -1,0 +1,1 @@
+sidebar: <?php echo $page_title; ?>
