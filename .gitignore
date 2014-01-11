@@ -4,3 +4,4 @@ application/config/database.php
 repo/*
 upload/*
 .settings
+.project
