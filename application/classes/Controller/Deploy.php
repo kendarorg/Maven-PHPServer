@@ -81,7 +81,7 @@ class Controller_Deploy extends Controller_Gui {
 			
 			if ($validation->check())
 			{
-				// TODO: save artifact
+				// Save artifact
 				$path = REPOPATH . $settings['repository'] . '/' . str_replace('.', '/', $settings['groupId']) . '/' . $settings['artifactId'] . '/' . $settings['version'];
 				if (!file_exists($path))
 				{
@@ -122,6 +122,30 @@ class Controller_Deploy extends Controller_Gui {
 		} else {
 			$settings = $this->get_artifact_data_from_jar($saved_file);
 			$settings['repository'] = 'libs-release-local';
+			if (strlen($settings['pom']) == 0)
+			{
+				$generatedpom = array();
+				$generatedpom['groupId'] = $settings['groupId'];
+				$generatedpom['artifactId'] = $settings['artifactId'];
+				$generatedpom['version'] = $settings['version'];
+				$generatedpom['classifier'] = $settings['classifier'];
+				$generatedpom['type'] = $settings['type'];
+				$generatedpom['dependencies'] = array();
+				Session::instance()->set('generatedpom', serialize($generatedpom));
+$settings['pom'] = <<<CONTENT
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>{$generatedpom['groupId']}</groupId>
+	<artifactId>{$generatedpom['artifactId']}</artifactId>
+	<packaging>{$generatedpom['type']}</packaging>
+	<version>{$generatedpom['version']}</version>
+	<name>{$generatedpom['groupId']}</name>
+	<description />
+
+</project>				
+CONTENT;
+			}
 			$this->template->content = View::factory('gui/deploy/pom')->bind('settings', $settings)->set('repositories', $this->repositories);
 		}
 	}
@@ -142,15 +166,21 @@ class Controller_Deploy extends Controller_Gui {
 			$settings['pom'] = '';
 			$settings['groupId'] = $split_artifact_file_name[0];
 			$settings['artifactId'] = $split_artifact_file_name[0];
-			$settings['version'] = $split_artifact_file_name[1];
-			$split_artifact_file_name = preg_split('/[.]/', $split_artifact_file_name[2]);
-			if (count($split_artifact_file_name) == 2)
+			if (count($split_artifact_file_name) > 1)
 			{
-				$settings['classifier'] = $split_artifact_file_name[0];
-				$settings['type'] = $split_artifact_file_name[1];
-			} else {
-				$settings['classifier'] = '';
-				$settings['type'] = $split_artifact_file_name[0];
+				$settings['version'] = $split_artifact_file_name[1];
+			}
+			if (count($split_artifact_file_name) > 2)
+			{
+				$split_artifact_file_name = preg_split('/[.]/', $split_artifact_file_name[2]);
+				if (count($split_artifact_file_name) == 2)
+				{
+					$settings['classifier'] = $split_artifact_file_name[0];
+					$settings['type'] = $split_artifact_file_name[1];
+				} else {
+					$settings['classifier'] = '';
+					$settings['type'] = $split_artifact_file_name[0];
+				}
 			}
 			return $settings;
 		} else {
