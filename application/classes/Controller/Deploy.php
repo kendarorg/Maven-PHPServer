@@ -132,21 +132,44 @@ class Controller_Deploy extends Controller_Gui {
 				$generatedpom['type'] = $settings['type'];
 				$generatedpom['dependencies'] = array();
 				Session::instance()->set('generatedpom', serialize($generatedpom));
-$settings['pom'] = <<<CONTENT
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>{$generatedpom['groupId']}</groupId>
-	<artifactId>{$generatedpom['artifactId']}</artifactId>
-	<packaging>{$generatedpom['type']}</packaging>
-	<version>{$generatedpom['version']}</version>
-	<name>{$generatedpom['groupId']}</name>
-	<description />
-
-</project>				
-CONTENT;
 			}
 			$this->template->content = View::factory('gui/deploy/pom')->bind('settings', $settings)->set('repositories', $this->repositories);
+		}
+	}
+
+	function action_dependency()
+	{
+		$saved_file = Session::instance()->get('artifact_file');
+		if (!$saved_file || !file_exists($saved_file))
+		{
+			$this->redirect(Route::get('default') -> uri(array('controller' => 'deploy', 'action' => 'index')));
+		}
+		$generatedpom = unserialize(Session::instance()->get('generatedpom'));
+		if ($this->request->method() == 'POST')
+		{
+			$dependency = $_POST;
+			$validation = Validation::factory($_POST);
+			$validation->rule('groupId', 'not_empty');
+			$validation->rule('artifactId', 'not_empty');
+			$validation->rule('version', 'not_empty');
+			if ($validation->check())
+			{
+				$generatedpom['dependencies'][] = $dependency;
+				Session::instance()->set('generatedpom', serialize($generatedpom));
+				
+				$pom = $this->generatePom($generatedpom);
+				$this->template->content = View::factory('gui/deploy/dependency')->bind('pom', $pom)->set('dependency', array());
+			} else {
+				$errors = $validation->errors();
+				
+				$pom = $this->generatePom($generatedpom);
+				$this->template->content = View::factory('gui/deploy/dependency')->bind('pom', $pom)->bind('errors', $errors)->set('dependency', $this->dependency);
+			}
+		}
+		else {
+			$pom = $this->generatePom($generatedpom);
+			$this->template->content = View::factory('gui/deploy/dependency')->bind('pom', $pom)->set('dependency', array());
 		}
 	}
 	
@@ -241,6 +264,40 @@ CONTENT;
 	function endsWith($haystack, $needle)
 	{
     	return $needle === "" || substr($haystack, -strlen($needle)) === $needle;
+	}
+	
+	function generatePom($generatedpom)
+	{
+		$pom = <<<CONTENT
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>{$generatedpom['groupId']}</groupId>
+	<artifactId>{$generatedpom['artifactId']}</artifactId>
+	<packaging>{$generatedpom['type']}</packaging>
+	<version>{$generatedpom['version']}</version>
+	<classifier>{$generatedpom['classifier']}</classifier>
+	<name>{$generatedpom['classifier']}</name>
+	<description />
+CONTENT;
+
+		if (count($generatedpom['dependencies']) > 0)
+		{
+			$pom .= "\r\n\r\n	<dependencies>";
+			foreach ($generatedpom['dependencies'] as $dependency) {
+				$pom .= "\r\n		<dependency>";
+				$pom .= "\r\n			<groupId>{$dependency['groupId']}</groupId>";
+				$pom .= "\r\n			<artifactId>{$dependency['artifactId']}</artifactId>";
+				$pom .= "\r\n			<version>{$dependency['version']}</version>";
+				if (isset($dependency['type']) && strlen($dependency['type']) > 0) $pom .= "\r\n			<packaging>{$dependency['type']}</packaging>";
+				if (isset($dependency['classifier']) && strlen($dependency['classifier']) > 0) $pom .= "\r\n			<classifier>{$dependency['classifier']}</classifier>";
+				$pom .= "\r\n		</dependency>";
+			}
+			$pom .= "\r\n	</dependencies>";
+		}
+
+		$pom .= "\r\n\r\n</project>";
+		return $pom;
 	}
 
 } // End Welcome

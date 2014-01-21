@@ -25,7 +25,7 @@ Present features
   * Multiple repositories
   * Manual artifact deployment
   
-Intended features (incomplete)
+Intended features (incomplete list)
 -----------------
 
   * Automatic artifact deployment

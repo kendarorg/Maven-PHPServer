@@ -40,9 +40,15 @@
 			<input type="text" class="form-control" name="type" id="type" value="<?php echo $settings['type']; ?>">
 			<p class="help-block">This has to be jar or war.</p>
 		</div>
-		<button type="submit" class="btn btn-primary">
-			Deploy
-		</button>
+		<div class="btn-group">
+			<button type="submit" class="btn btn-primary">
+				Deploy
+			</button>
+			<a class="btn btn-default" href="<?php echo Route::get('default') -> uri(array('controller' => 'deploy', 'action' => 'dependency')); ?>">
+				Add dependencies
+			</a>
+		</div>
+		
 		<div class="form-group">
 			<label for="pom">Pom</label>
 			<textarea name="pom" id="pom" class="form-control" rows="30" readonly="readonly"><?php echo htmlspecialchars($settings['pom']); ?></textarea>
